@@ -1,2 +1,2 @@
-# Blackjack
-Blackjack in the terminal.
+# Farkle
+Farkle in the terminal.
