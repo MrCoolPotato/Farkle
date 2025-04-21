@@ -12,7 +12,7 @@ import (
 func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 	fmt.Println("=== Welcome to Farkle ===")
-	fmt.Println("Type 'roll' to roll dice, 'exit' to quit.")
+	fmt.Println("Type 'play' to start a new game, or 'exit' to quit.")
 
 	for {
 		fmt.Print("> ")
@@ -22,13 +22,13 @@ func main() {
 		input := strings.TrimSpace(scanner.Text())
 
 		switch strings.ToLower(input) {
-		case "roll":
+		case "play":
 			farkle.PlayGame()
 		case "exit":
 			fmt.Println("Goodbye!")
 			return
 		default:
-			fmt.Println("Unknown command. Type 'roll' or 'exit'.")
+			fmt.Println("Unknown command. Type 'play' or 'exit'.")
 		}
 	}
 }

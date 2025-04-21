@@ -10,6 +10,13 @@ import (
 	"time"
 )
 
+const winningScore = 10000
+
+type Player struct {
+	Name  string
+	Total int
+}
+
 var dieFaces = map[int]string{
 	1: "⚀",
 	2: "⚁",
@@ -21,66 +28,40 @@ var dieFaces = map[int]string{
 
 func PlayGame() {
 	rand.Seed(time.Now().UnixNano())
+
+	player := Player{Name: "You"}
+	enemy := Player{Name: "Enemy"}
+
 	round := 1
-
 	for {
-		fmt.Printf("\n== Round %d ==\n", round)
-		// Player's turn
-		diceToRoll := 6
-		var keptValues []int
-		var turnScore int
+		fmt.Printf("\n========================\n")
+		fmt.Printf(" ROUND %d – First to %d\n", round, winningScore)
+		fmt.Printf("========================\n")
+		fmt.Printf("Scoreboard → You: %d | Enemy: %d\n", player.Total, enemy.Total)
 
-	playerLoop:
-		for {
-			fmt.Printf("-- Player Roll: rolling %d dice --\n", diceToRoll)
-			dice := rollDice(diceToRoll)
-			renderDice(dice)
-			fmt.Printf("Kept so far: ")
-			renderDice(keptValues)
-			fmt.Printf("Potential score: %d\n", calculateScore(keptValues))
-			fmt.Println("Commands: 'keep X X...', 'roll' to score & reroll, 'bank' to score & end turn")
-
-			kept, action := promptAction(dice)
-			switch action {
-			case "quit":
-				fmt.Println("Goodbye!")
-				os.Exit(0)
-			case "keep":
-				keptValues = append(keptValues, kept...)
-				diceToRoll -= len(kept)
-				if diceToRoll <= 0 {
-					fmt.Println("Hot dice! Resetting to 6 dice.")
-					diceToRoll = 6
-					keptValues = []int{}
-				}
-				continue
-			case "roll":
-				if len(keptValues) == 0 {
-					fmt.Println("You must keep at least one die before rolling.")
-					continue
-				}
-				// score & reroll: calculate but continue
-				turnScore = calculateScore(keptValues)
-				break playerLoop
-			case "bank":
-				turnScore = calculateScore(keptValues)
-				break playerLoop
-			}
+		fmt.Println("\nYour turn:")
+		fmt.Println("First roll will happen automatically; then choose dice to keep or bank.")
+		playerPoints := playerTurn()
+		player.Total += playerPoints
+		fmt.Printf("You banked %d points. New total: %d\n", playerPoints, player.Total)
+		if player.Total >= winningScore {
+			fmt.Println("\n🏆  You win the game! 🏆")
+			return
 		}
 
-		fmt.Printf("You scored %d points this turn.\n", turnScore)
-
-		// Enemy's turn: single roll (no scoring for now)
-		fmt.Println("-- Enemy's turn --")
-		enemyDice := rollDice(6)
-		renderDice(enemyDice)
+		fmt.Println("\nEnemy turn:")
+		enemyPoints := enemyTurn()
+		enemy.Total += enemyPoints
+		fmt.Printf("Enemy banked %d points. New total: %d\n", enemyPoints, enemy.Total)
+		if enemy.Total >= winningScore {
+			fmt.Println("\n💀  Enemy wins the game. Better luck next time!")
+			return
+		}
 
 		round++
-		break // adjust to allow multiple rounds later
 	}
 }
 
-// rollDice generates n random dice values (1–6).
 func rollDice(n int) []int {
 	dice := make([]int, n)
 	for i := 0; i < n; i++ {
@@ -89,7 +70,6 @@ func rollDice(n int) []int {
 	return dice
 }
 
-// renderDice displays each die with its Unicode face and numeric value.
 func renderDice(dice []int) {
 	for _, d := range dice {
 		fmt.Printf("[%s %d] ", dieFaces[d], d)
@@ -97,7 +77,6 @@ func renderDice(dice []int) {
 	fmt.Println()
 }
 
-// calculateScore computes Farkle points for the given kept dice.
 func calculateScore(dice []int) int {
 	counts := make(map[int]int)
 	for _, d := range dice {
@@ -122,8 +101,7 @@ func calculateScore(dice []int) int {
 	return score
 }
 
-// promptAction parses user input for keep, roll, bank, or quit commands.
-func promptAction(dice []int) (kept []int, action string) {
+func promptAction(roll []int) (kept []int, action string) {
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		fmt.Print("> ")
@@ -132,53 +110,121 @@ func promptAction(dice []int) (kept []int, action string) {
 		}
 		input := strings.TrimSpace(scanner.Text())
 		lower := strings.ToLower(input)
+
 		if lower == "quit" || lower == "exit" {
 			return nil, "quit"
 		}
-		if lower == "bank" {
-			return nil, "bank"
-		}
-		if lower == "roll" {
-			return nil, "roll"
-		}
-		if strings.HasPrefix(lower, "keep ") {
-			parts := strings.Fields(strings.TrimPrefix(input, "keep "))
+
+		parseDice := func(parts []string) ([]int, bool) {
 			req := make(map[int]int)
-			valid := true
+			var vals []int
 			for _, p := range parts {
 				val, err := strconv.Atoi(p)
 				if err != nil || val < 1 || val > 6 {
 					fmt.Println("Invalid die value:", p)
-					valid = false
-					break
+					return nil, false
 				}
 				req[val]++
+				vals = append(vals, val)
 			}
-			if !valid {
-				continue
-			}
-			// Check availability
 			avail := make(map[int]int)
-			for _, d := range dice {
+			for _, d := range roll {
 				avail[d]++
 			}
 			for val, cnt := range req {
 				if cnt > avail[val] {
 					fmt.Printf("Cannot keep %d of '%d'; only %d available.\n", cnt, val, avail[val])
-					valid = false
-					break
+					return nil, false
 				}
 			}
-			if !valid {
+			for _, v := range vals {
+				if calculateScore([]int{v}) == 0 {
+					fmt.Printf("Die %d does not score; only scoring dice may be kept.\n", v)
+					return nil, false
+				}
+			}
+			return vals, true
+		}
+
+		if strings.HasPrefix(lower, "keep ") {
+			parts := strings.Fields(input)[1:]
+			vals, ok := parseDice(parts)
+			if ok {
+				return vals, "keep"
+			}
+			continue
+		}
+
+		if strings.HasPrefix(lower, "bank") {
+			parts := strings.Fields(input)[1:]
+			if len(parts) == 0 {
+				fmt.Println("Specify dice to bank, e.g., 'bank 1 5'.")
 				continue
 			}
-			// Build kept slice
-			for _, p := range parts {
-				val, _ := strconv.Atoi(p)
-				kept = append(kept, val)
+			vals, ok := parseDice(parts)
+			if ok {
+				return vals, "bank"
 			}
-			return kept, "keep"
+			continue
 		}
-		fmt.Println("Invalid command. Use 'keep X...', 'roll', or 'bank'.")
+
+		fmt.Println("Commands: 'keep X X...' (score & continue), 'bank X X...' (score & pass), or 'quit'")
 	}
+}
+
+func playerTurn() int {
+	diceToRoll := 6
+	turnScore := 0
+
+outer:
+	for {
+		fmt.Printf("-- Rolling %d dice --\n", diceToRoll)
+		roll := rollDice(diceToRoll)
+		renderDice(roll)
+
+		if calculateScore(roll) == 0 {
+			fmt.Println("Farkle! You lose all unbanked points for this turn.")
+			return 0
+		}
+
+		fmt.Println("Commands: 'keep X X...' to score & CONTINUE, 'bank X X...' to score & PASS, or 'quit'")
+
+	inner:
+		for {
+			kept, action := promptAction(roll)
+			switch action {
+			case "quit":
+				fmt.Println("Goodbye!")
+				os.Exit(0)
+			case "keep":
+				score := calculateScore(kept)
+				turnScore += score
+				fmt.Printf("Scored %d (turn total %d). Continuing...\n", score, turnScore)
+
+				diceToRoll -= len(kept)
+				if diceToRoll == 0 {
+					fmt.Println("Hot dice! All dice scored, rolling 6 fresh dice.")
+					diceToRoll = 6
+				}
+				break inner
+			case "bank":
+				score := calculateScore(kept)
+				turnScore += score
+				return turnScore
+			}
+		}
+		continue outer
+	}
+}
+
+func enemyTurn() int {
+	roll := rollDice(6)
+	renderDice(roll)
+	score := calculateScore(roll)
+	if score == 0 {
+		fmt.Println("Enemy Farkled and scores 0.")
+		return 0
+	}
+	fmt.Printf("Enemy keeps all scoring dice and banks %d.\n", score)
+	return score
 }
