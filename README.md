@@ -1,2 +1,2 @@
 # Farkle
-Farkle in the terminal.
+Farkle in the terminal. [WIP]
