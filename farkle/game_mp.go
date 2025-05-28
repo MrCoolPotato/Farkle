@@ -3,6 +3,7 @@ package farkle
 import (
 	crand "crypto/rand"
 	"encoding/base32"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -10,11 +11,21 @@ import (
 	"strings"
 	"sync"
 	"time"
-)
 
+	igd "github.com/huin/goupnp/dcps/internetgateway1"
+)
 var b32 = base32.StdEncoding.WithPadding(base32.NoPadding)
 
-//MARK: Message Definition
+const ColorMagenta = "\033[35m"
+
+//MARK: Peer Dice Render
+func renderPeerDice(dice []int) {
+	for _, d := range dice {
+		fmt.Printf(ColorMagenta+"[%s %d]"+ColorReset+" ", dieFaces[d], d)
+	}
+	fmt.Println()
+}
+//MARK: NetMsg
 type NetMsg struct {
 	T         string `json:"t"`
 	Dice      []int  `json:"dice,omitempty"`
@@ -30,10 +41,36 @@ type NetMsg struct {
 	PeerTotal int    `json:"ptotal,omitempty"`
 }
 
+//MARK: UPnP helper
+func tryUPnP(localPort uint16) (uint16, bool) {
+	clients, _, err := igd.NewWANIPConnection1Clients()
+	if err != nil || len(clients) == 0 {
+		return 0, false
+	}
+	internalIP := getOutboundIPv4()
+	for _, c := range clients {
+		extPort := localPort
+		err := c.AddPortMapping("", extPort, "TCP", localPort, internalIP, true, "Farkle", 0)
+		if err == nil {
+			return extPort, true
+		}
+	}
+	return 0, false
+}
+
 //MARK: Host Lobby
+
 func HostLobby(target int) {
 	WinningScore = target
-	id := generateLobbyID()
+	hostIP := getOutboundIPv4()
+	externalPort := uint16(9313)
+	if p, ok := tryUPnP(9313); ok {
+		externalPort = p
+		fmt.Println(ColorCyan+"UPnP mapped external port", externalPort, ColorReset)
+	} else {
+		fmt.Println(ColorYellow + "UPnP failed; you may need port‑forward." + ColorReset)
+	}
+	id := encodeLobbyID(hostIP, externalPort)
 	fmt.Println(ColorYellow+"Lobby created. Share ID: "+id+ColorReset)
 
 	ln, err := net.Listen("tcp", ":9313")
@@ -83,6 +120,8 @@ func HostLobby(target int) {
 		enc.Encode(NetMsg{T: "roll", Dice: roll, Idx: currentIdx})
 		if currentIdx == 0 {
 			renderDice(roll)
+		} else {
+			renderPeerDice(roll)
 		}
 
 		if calculateScore(roll) == 0 {
@@ -191,7 +230,18 @@ func hostTurnLoop(roll []int, diceToRoll int, encHot chan NetMsg) (turnScore int
 
 //MARK: Peer Lobby
 func JoinLobby(hostIP, lobbyID string) {
-	addr := net.JoinHostPort(hostIP, "9313")
+	port := uint16(9313)
+
+	if hostIP == "" {
+		if ip, prt, ok := decodeIPFromLobby(lobbyID); ok {
+			hostIP = ip
+			port = prt
+		} else {
+			fmt.Println(ColorRed + "Invalid lobby ID format." + ColorReset)
+			return
+		}
+	}
+	addr := net.JoinHostPort(hostIP, fmt.Sprint(port))
 	fmt.Println("Dialling", addr, "with lobby ID", lobbyID, "…")
 
 	conn, err := net.DialTimeout("tcp", addr, 10*time.Second)
@@ -290,4 +340,39 @@ func generateLobbyID() string {
 	buf := make([]byte, 5)
 	crand.Read(buf)
 	return strings.ToUpper(b32.EncodeToString(buf))
+}
+
+// encodeLobbyID packs IPv4(4B)+Port(2B)+rand(1B) → 7 bytes → Base32
+func encodeLobbyID(hostIP string, port uint16) string {
+	ip := net.ParseIP(hostIP).To4()
+	if ip == nil {
+		return generateLobbyID()
+	}
+	buf := make([]byte, 7)
+	copy(buf, ip)
+	binary.BigEndian.PutUint16(buf[4:6], port)
+	crand.Read(buf[6:7])
+	return strings.ToUpper(b32.EncodeToString(buf))
+}
+
+func decodeIPFromLobby(id string) (string, uint16, bool) {
+	data, err := b32.DecodeString(strings.ToUpper(id))
+	if err != nil || len(data) != 7 {
+		return "", 0, false
+	}
+	ip := net.IPv4(data[0], data[1], data[2], data[3]).String()
+	port := binary.BigEndian.Uint16(data[4:6])
+	return ip, port, true
+}
+
+func getOutboundIPv4() string {
+	addrs, _ := net.InterfaceAddrs()
+	for _, a := range addrs {
+		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if v4 := ipnet.IP.To4(); v4 != nil {
+				return v4.String()
+			}
+		}
+	}
+	return "127.0.0.1"
 }

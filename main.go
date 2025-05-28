@@ -25,7 +25,7 @@ const banner = ColorCyan + `=== Welcome to Farkle ===` + ColorReset + `
   ` + ColorYellow + `play [score]` + ColorReset + `                       → solo vs CPU
 ` + ColorGreen + `Multiplayer (2 players):` + ColorReset + `
   ` + ColorYellow + `play [score] --mp --create` + ColorReset + `         → host a lobby
-  ` + ColorYellow + `play --mp --join=<ID> [--host=<ip>]` + ColorReset + `→ join a lobby (host defaults 127.0.0.1)
+  ` + ColorYellow + `play --mp --join=<ID>` + ColorReset + `→ join a lobby
 ` + ColorBlue + `Score range 1000‑20000 (default 1000).` + ColorReset + `
 ` + ColorRed + `Type 'exit/quit' to quit.` + ColorReset
 
