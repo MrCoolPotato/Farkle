@@ -140,7 +140,7 @@ func HostLobby(target int) {
 			enc.Encode(NetMsg{T: "score", Idx: 0, Delta: turnScore, Total: hostTotal})
 			if hostTotal >= WinningScore {
 				enc.Encode(NetMsg{T: "game_over", Idx: 0})
-				fmt.Println(ColorGreen + "🏆 You win! Returning to menu." + ColorReset)
+				fmt.Println(ColorGreen + "You win! Returning to menu." + ColorReset)
 				return
 			}
 			diceToRoll = diceRemaining
@@ -164,7 +164,7 @@ func HostLobby(target int) {
 				enc.Encode(NetMsg{T: "score", Idx: 1, Delta: score, Total: peerTotal})
 				if peerTotal >= WinningScore {
 					enc.Encode(NetMsg{T: "game_over", Idx: 1})
-					fmt.Println(ColorRed + "💀 Peer wins. Returning to menu." + ColorReset)
+					fmt.Println(ColorRed + "Peer wins. Returning to menu." + ColorReset)
 					return
 				}
 				if act.Bank {

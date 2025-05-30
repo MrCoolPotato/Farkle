@@ -58,7 +58,7 @@ func PlayGame() {
         player.Total += playerPoints
         fmt.Printf("You banked %d points. New total: %d\n", playerPoints, player.Total)
         if player.Total >= WinningScore {
-            fmt.Println("\n" + ColorGreen + "🏆  You win the game! 🏆" + ColorReset)
+            fmt.Println("\n" + ColorGreen + "VICTORY!" + ColorReset)
             return
         }
 
@@ -67,7 +67,7 @@ func PlayGame() {
         enemy.Total += enemyPoints
         fmt.Printf("Enemy banked %d points. New total: %d\n", enemyPoints, enemy.Total)
         if enemy.Total >= WinningScore {
-            fmt.Println("\n" + ColorRed + "💀  Enemy wins the game. Better luck next time!" + ColorReset)
+            fmt.Println("\n" + ColorRed + "DEFEAT!" + ColorReset)
             return
         }
 
