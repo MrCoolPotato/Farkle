@@ -49,7 +49,7 @@ The project offers both a single-player mode (human vs. AI) and a peer-to-peer m
 
 ## Installation & Build
 
-Refer to the packages section or continue down.
+Refer to the "Releases" section or continue down.
 
 ```bash
 # Clone and install deps
