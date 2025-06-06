@@ -1,3 +1,5 @@
+![Farkle Logo](farkle_raw.png)
+
 # Farkle (CLI Edition)
 
 Welcome to **Farkle** – a fully-playable terminal implementation of the dice game.
