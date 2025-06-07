@@ -3,7 +3,7 @@
 # Farkle (CLI Edition)
 
 Welcome to **Farkle** – a fully-playable terminal implementation of the dice game.
-The project offers both a single-player mode (human vs. AI) and a peer-to-peer multiplayer mode with automatic lobby IDs and optional UPnP port-mapping for hassle-free Internet play.
+The project offers both a single-player mode (human vs. AI) and a local multiplayer mode with automatic lobby IDs.
 
 ---
 
@@ -25,9 +25,9 @@ The project offers both a single-player mode (human vs. AI) and a peer-to-peer m
 * **Enemy AI**: basic risk heuristic; banks intelligently and recognises all scoring combos.
 * **Colourful TUI**: distinct colours for banners, dice, prompts, peer rolls, hot-dice & farkles.
 * **Keep / Bank commands** exactly like they sound *Score & Continue* / *Score & Pass*.
-* **Peer-to-Peer multiplayer**:
-  * Auto-generated Lobby ID encodes host’s public IPv4 + port.
-  * Optional UPnP port-mapping (TCP 9313) – no manual router config in most home networks.
+* **Local multiplayer**:
+  * Auto-generated Lobby ID.
+  * Optional UPnP port-mapping (TCP 9313).
   * Live ping keep-alive to detect disconnects.
 * **Configurable winning score** (`play 15000` → first to 15 000).
 
@@ -40,7 +40,7 @@ The project offers both a single-player mode (human vs. AI) and a peer-to-peer m
 | `play`                      | Solo game to 1 000 points.                       |
 | `play 10000`                | Solo to 10 000.                                  |
 | `play --mp --create`        | Host a lobby, prints Lobby ID (e.g. `B4Q5FPHG`). |
-| `play --mp --join=B4Q5FPHG` | Join that lobby – IP+port decoded automatically. |
+| `play --mp --join=B4Q5FPHG` | Join that lobby – Details decoded automatically. |
 | `keep 1 5 5`                | Score those dice & continue.                     |
 | `bank 1 1 1`                | Score & pass turn.                               |
 | `quit` / `exit`             | Leave at any prompt.                             |
